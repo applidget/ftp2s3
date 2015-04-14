@@ -68,6 +68,10 @@ func main() {
 					log.Printf("[ERROR adding watch on new folder] %v\n", err)
 				} else {
 					log.Printf("now watching %s\n", ev.Name)
+					//add other sub directories
+					if err := setupRecursiveWatch(ev.Name, watcher); err != nil {
+						log.Fatal("[ERROR in setup recursive watch] %v\n", err)
+					}
 				}
 
 			case inotify.IN_DELETE | inotify.IN_ISDIR:
@@ -91,6 +95,8 @@ func setupRecursiveWatch(basePath string, watcher *inotify.Watcher) error {
 		if !info.IsDir() {
 			return nil
 		}
+		absPath, _ := filepath.Abs(p)
+		log.Printf("- watching %s\n", absPath)
 		return watcher.AddWatch(p, inotify.IN_ALL_EVENTS)
 	}
 	return filepath.Walk(basePath, walkFn)
