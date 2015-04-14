@@ -11,4 +11,4 @@ chown -R $USERNAME:$USERNAME /ftp
 service proftpd start
 
 #start the watcher
-fswatcher /ftp
+ftp2s3 /ftp

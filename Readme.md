@@ -1,10 +1,10 @@
-#fswatcher + docker
+#ftp2s3 + docker
 
 Spawn a ftp server and upload every images onto a S3 bucket
 
-#fswatcher
+#ftp2s3
 
-The `fswatcher` binary is a Go program that listens for changes on a given directory, when an image (.png, .jpg or .jpeg) is created in this directory it's uploaded onto a S3 bucket. If the upload is successful, the image is locally destroyed.
+The `ftp2s3` binary is a Go program that listens for changes on a given directory, when an image (.png, .jpg or .jpeg) is created in this directory it's uploaded onto a S3 bucket. If the upload is successful, the image is locally destroyed.
 
 ###Usage
 
@@ -12,18 +12,18 @@ The `fswatcher` binary is a Go program that listens for changes on a given direc
 export AWS_ACCESS_KEY=
 export AWS_SECRET_ACCESS_KEY=
 export AWS_BUCKET=applidget-ftp-photo-uploader
-fswatcher <directory_to_watch> # (default is `.`)
+ftp2s3 <directory_to_watch> # (default is `.`)
 ````
 
-It's recommended to work on `fswatcher` using `vagrant`
+It's recommended to work on `ftp2s3` using `vagrant`
 
 #Docker image
 
-The docker image spawns a ftp server (`proftpd`) in the container `/ftp` directory and starts `fswatcher` on this directory. It allows to get data from devices (camera) which only speak ftp directly from S3. 
+The docker image spawns a ftp server (`proftpd`) in the container `/ftp` directory and starts `ftp2s3` on this directory. It allows to get data from devices (camera) which only speak ftp directly from S3. 
 
 ###Building the image
 
-1. Build the `fswatcher` binary (from Vagrant or using GOOS=linux)
+1. Build the `ftp2s3` binary (from Vagrant or using GOOS=linux)
 2. `cd` into the directory and `docker build .`
 
 ###Running the image
