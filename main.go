@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
 	"golang.org/x/exp/inotify"
@@ -20,7 +23,7 @@ var (
 )
 
 func main() {
-	log.Println("Starting watcher ...")
+	log.Info("Starting watcher ...")
 
 	//instanciate S3 client
 	auth, err := aws.EnvAuth()
@@ -40,9 +43,9 @@ func main() {
 		workingDir = os.Args[1]
 	}
 
-	log.Printf("Watching directory %s\n", workingDir)
+	log.Infof("Watching directory %s", workingDir)
 	if err := setupRecursiveWatch(workingDir, watcher); err != nil {
-		log.Fatal("[ERROR in setup recursive watch] %v\n", err)
+		log.Fatal(err)
 	}
 	err = watcher.Watch(workingDir)
 	if err != nil {
@@ -57,33 +60,36 @@ func main() {
 				go func() {
 					url, err := uploadImageToS3(ev.Name)
 					if err != nil {
-						log.Printf("[ERROR uploading to S3] %v\n", err)
-					} else {
-						log.Println(url)
+						log.Error(err)
+						return
+					}
+					log.Info(url)
+					if err := notifyNewImage("lol", "lol"); err != nil {
+						log.Error(err)
 					}
 				}()
 
 			case inotify.IN_CREATE | inotify.IN_ISDIR: //new directory created inside working dir, watch it too
 				if err := watcher.AddWatch(ev.Name, inotify.IN_ALL_EVENTS); err != nil {
-					log.Printf("[ERROR adding watch on new folder] %v\n", err)
+					log.Error(err)
 				} else {
-					log.Printf("now watching %s\n", ev.Name)
+					log.Infof("now watching %s", ev.Name)
 					//add other sub directories
 					if err := setupRecursiveWatch(ev.Name, watcher); err != nil {
-						log.Fatal("[ERROR in setup recursive watch] %v\n", err)
+						log.Fatal(err)
 					}
 				}
 
 			case inotify.IN_DELETE | inotify.IN_ISDIR:
 				if err := watcher.RemoveWatch(ev.Name); err != nil {
-					log.Printf("[ERROR removing watch] %v\n", err)
+					log.Warn(err)
 				} else {
-					log.Printf("now watching %s\n", ev.Name)
+					log.Infof("now watching %s", ev.Name)
 				}
 			}
 
 		case err := <-watcher.Error:
-			log.Printf("[ERROR] %v\n", err)
+			log.Error(err)
 		}
 	}
 }
@@ -96,16 +102,16 @@ func setupRecursiveWatch(basePath string, watcher *inotify.Watcher) error {
 			return nil
 		}
 		absPath, _ := filepath.Abs(p)
-		log.Printf("- watching %s\n", absPath)
+		log.Infof("- watching %s", absPath)
 		return watcher.AddWatch(p, inotify.IN_ALL_EVENTS)
 	}
 	return filepath.Walk(basePath, walkFn)
 }
 
-// uploadImageToS3 check if the given file is an image and upload it to S3. It return the
+// uploadImageToS3 check if the given file is an image and upload it to S3 and post to web_hook if . It return the
 // image URL or an error
 func uploadImageToS3(p string) (string, error) {
-	log.Printf("handling %s\n", p)
+	log.Info("handling %s\n", p)
 
 	fileName, _ := filepath.Rel(workingDir, p)
 	ext := strings.TrimPrefix(filepath.Ext(p), ".")
@@ -131,7 +137,41 @@ func uploadImageToS3(p string) (string, error) {
 		return "", err
 	}
 
-	log.Printf("file %s uploaded to S3\n", p)
+	log.Info("file %s uploaded to S3\n", p)
 	os.Remove(p)
 	return bucket.URL(fileName), nil
+}
+
+// notifyNewImage send a POST request to the WEB_HOOK env var (if it exists)
+
+func notifyNewImage(basePath, imageUrl string) error {
+	hook := os.Getenv("WEB_HOOK")
+	if hook == "" {
+		return nil
+	}
+
+	type payload struct {
+		Url      string `json:"url"`
+		BasePath string `json:"base_path"`
+	}
+
+	body := &payload{Url: imageUrl, BasePath: basePath}
+	b, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", hook, bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("expecting status code in 200 .. 299 got %d", resp.StatusCode)
+	}
+	return nil
 }
