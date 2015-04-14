@@ -113,7 +113,7 @@ func uploadImageToS3(p string) (string, error) {
 	}
 
 	if !allowed {
-		return "", fmt.Errorf("only file with extensions are %v uploaded\n", allowedExts)
+		return "", fmt.Errorf("only file with extensions %v are uploaded\n", allowedExts)
 	}
 
 	b, err := ioutil.ReadFile(p)
