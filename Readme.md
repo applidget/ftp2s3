@@ -43,7 +43,7 @@ ftp 192.168.59.XX #(or the ip address of boot2docker / your host / your VM )
 $> username
 $> password
 $> put /local/path/to/an/image.png name_on_the_ftp.png
-````bash
+````
 
 
  
