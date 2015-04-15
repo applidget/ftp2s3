@@ -57,5 +57,6 @@ go_get() {
 go_get golang.org/x/exp/inotify
 go_get github.com/mitchellh/goamz/s3
 go_get github.com/mitchellh/goamz/aws
+go_get github.com/Sirupsen/logrus
 
 echo "don't forget to add vendor folder to your GOPATH (export GOPATH=\$GOPATH:\`pwd\`/vendor)"
