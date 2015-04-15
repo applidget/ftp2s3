@@ -31,7 +31,7 @@ The docker image spawns a ftp server (`proftpd`) in the container `/ftp` directo
 Build the image then `docker images` will output images ID. The first one should be the one just built. Then:
 
 ````bash
-docker run -it -p 21:21 -p 20:20 -p 5000-5100:5000-5100 -e USERNAME=<username> -e PASSWORD=<password> -e AWS_SECRET_ACCESS_KEY=<secret_key> -e AWS_ACCESS_KEY=<access_key> -e AWS_BUCKET=<bucket_name> <image_id>
+docker run -it -p 21:21 -p 20:20 -p 5000-5100:5000-5100 -e USERNAME=<username> -e PASSWORD=<password> -e AWS_SECRET_ACCESS_KEY=<secret_key> -e AWS_ACCESS_KEY=<access_key> -e AWS_BUCKET=<bucket_name> -e WEB_HOOK=<web_hook> <image_id>
 ````
 
 Note port 20 and 21 are basic ftp ports, port 5000 to 5100 are used for ftp passive connection.

@@ -64,7 +64,7 @@ func main() {
 						return
 					}
 					log.Info(url)
-					if err := notifyNewImage("lol", "lol"); err != nil {
+					if err := notifyNewImage("lol", url); err != nil {
 						log.Error(err)
 					}
 				}()
@@ -111,7 +111,7 @@ func setupRecursiveWatch(basePath string, watcher *inotify.Watcher) error {
 // uploadImageToS3 check if the given file is an image and upload it to S3 and post to web_hook if . It return the
 // image URL or an error
 func uploadImageToS3(p string) (string, error) {
-	log.Info("handling %s\n", p)
+	log.Infof("handling %s", p)
 
 	fileName, _ := filepath.Rel(workingDir, p)
 	ext := strings.TrimPrefix(filepath.Ext(p), ".")
@@ -125,7 +125,7 @@ func uploadImageToS3(p string) (string, error) {
 	}
 
 	if !allowed {
-		return "", fmt.Errorf("only file with extensions %v are uploaded\n", allowedExts)
+		return "", fmt.Errorf("only file with extensions %v are uploaded", allowedExts)
 	}
 
 	b, err := ioutil.ReadFile(p)
@@ -151,7 +151,7 @@ func notifyNewImage(basePath, imageUrl string) error {
 	}
 
 	type payload struct {
-		Url      string `json:"url"`
+		Url      string `json:"remote_photo_url"`
 		BasePath string `json:"base_path"`
 	}
 
@@ -173,5 +173,6 @@ func notifyNewImage(basePath, imageUrl string) error {
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("expecting status code in 200 .. 299 got %d", resp.StatusCode)
 	}
+	log.Infof("Notification sent to %s", hook)
 	return nil
 }
