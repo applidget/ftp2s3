@@ -34,6 +34,15 @@ Build the image then `docker images` will output images ID. The first one should
 docker run -it -p 21:21 -p 20:20 -p 5000-5100:5000-5100 -e USERNAME=<username> -e PASSWORD=<password> -e AWS_SECRET_ACCESS_KEY=<secret_key> -e AWS_ACCESS_KEY=<access_key> -e AWS_BUCKET=<bucket_name> -e WEB_HOOK=<web_hook> <image_id>
 ````
 
+###WEB_HOOK
+
+The `WEB_HOOK` env var can be specified. If it exists, `ftp2s3` will post the image URL to the path:
+
+`$WEB_HOOK/buckets/:id/photos.json` where `:id` is replaced by the name of the base folder. For example,
+if the ftp server is in `/ftp` and a photo is created in `/ftp/foo/dcim/bar.jpg` we will :
+
+`POST $WEB_HOOK/buckets/foo/photos.json` with body `"remote_photo_url": "http://jqhebkjhbqslqkb"`
+
 Note port 20 and 21 are basic ftp ports, port 5000 to 5100 are used for ftp passive connection.
 
 To send an image on the ftp server:

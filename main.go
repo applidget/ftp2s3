@@ -18,7 +18,7 @@ import (
 
 var (
 	bucket      *s3.Bucket
-	allowedExts = []string{"png", "jpeg", "jpg"}
+	allowedExts = []string{"png", "jpeg", "jpg", "PNG", "JPG", "JPEG"}
 	workingDir  = "./" //can be overrided by args[1]
 )
 
@@ -58,17 +58,19 @@ func main() {
 
 			case inotify.IN_CLOSE_WRITE: //if it's a file we handle it
 				go func() {
-					url, err := uploadImageToS3(ev.Name)
+					basePath, url, err := uploadImageToS3(ev.Name)
 					if err != nil {
 						log.Error(err)
 						return
 					}
 					log.Info(url)
-					if err := notifyNewImage("lol", url); err != nil {
+					if err := notifyNewImage(basePath, url); err != nil {
 						log.Error(err)
 					}
 				}()
 
+			case inotify.IN_MOVED_TO | inotify.IN_ISDIR:
+				fallthrough
 			case inotify.IN_CREATE | inotify.IN_ISDIR: //new directory created inside working dir, watch it too
 				if err := watcher.AddWatch(ev.Name, inotify.IN_ALL_EVENTS); err != nil {
 					log.Error(err)
@@ -110,10 +112,11 @@ func setupRecursiveWatch(basePath string, watcher *inotify.Watcher) error {
 
 // uploadImageToS3 check if the given file is an image and upload it to S3 and post to web_hook if . It return the
 // image URL or an error
-func uploadImageToS3(p string) (string, error) {
+func uploadImageToS3(p string) (string, string, error) {
 	log.Infof("handling %s", p)
 
 	fileName, _ := filepath.Rel(workingDir, p)
+	baseFolder := strings.Split(fileName, "/")[0]
 	ext := strings.TrimPrefix(filepath.Ext(p), ".")
 
 	allowed := false
@@ -125,21 +128,21 @@ func uploadImageToS3(p string) (string, error) {
 	}
 
 	if !allowed {
-		return "", fmt.Errorf("only file with extensions %v are uploaded", allowedExts)
+		return "", "", fmt.Errorf("only file with extensions %v are uploaded", allowedExts)
 	}
 
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if err = bucket.Put(fileName, b, filepath.Join("image", ext), "public-read-write"); err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	log.Info("file %s uploaded to S3\n", p)
+	log.Infof("file %s uploaded to S3", p)
 	os.Remove(p)
-	return bucket.URL(fileName), nil
+	return baseFolder, bucket.URL(fileName), nil
 }
 
 // notifyNewImage send a POST request to the WEB_HOOK env var (if it exists)
@@ -151,17 +154,20 @@ func notifyNewImage(basePath, imageUrl string) error {
 	}
 
 	type payload struct {
-		Url      string `json:"remote_photo_url"`
-		BasePath string `json:"base_path"`
+		Url string `json:"remote_photo_url"`
 	}
 
-	body := &payload{Url: imageUrl, BasePath: basePath}
+	body := &payload{Url: imageUrl}
 	b, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", hook, bytes.NewBuffer(b))
+	fullURL := fmt.Sprintf("%s/buckets/%s/photos.json", hook, basePath)
+
+	log.Infof("Notifying hook at %s", fullURL)
+
+	req, err := http.NewRequest("POST", fullURL, bytes.NewBuffer(b))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
