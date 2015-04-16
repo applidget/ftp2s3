@@ -153,11 +153,15 @@ func notifyNewImage(basePath, imageUrl string) error {
 		return nil
 	}
 
-	type payload struct {
-		Url string `json:"remote_photo_url"`
+	type photo struct {
+		Url string `json:"remote_url"`
 	}
 
-	body := &payload{Url: imageUrl}
+	type payload struct {
+		Photo *photo `json:"photo"`
+	}
+
+	body := &payload{&photo{Url: imageUrl}}
 	b, err := json.Marshal(body)
 	if err != nil {
 		return err

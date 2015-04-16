@@ -1,6 +1,6 @@
 FROM ubuntu
 
-RUN apt-get update -qq && apt-get install -y proftpd ca-certificates && mkdir -p /ftp
+RUN apt-get update -qq && apt-get install -y proftpd ca-certificates && mkdir -p /ftp/before0 /ftp/before1 /ftp/before2 /ftp/before3 /ftp/before4 /ftp/before5 /ftp/before6 /ftp/before7 /ftp/before8 /ftp/before9
 
 ADD ftp2s3 /usr/local/bin/ftp2s3
 
