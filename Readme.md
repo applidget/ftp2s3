@@ -17,14 +17,14 @@ ftp2s3 <directory_to_watch> # (default is `.`)
 
 It's recommended to work on `ftp2s3` using `vagrant`
 
-#Docker image
+#Docker image development
 
 The docker image spawns a ftp server (`proftpd`) in the container `/ftp` directory and starts `ftp2s3` on this directory. It allows to get data from devices (camera) which only speak ftp directly from S3. 
 
 ###Building the image
 
 1. Build the `ftp2s3` binary (from Vagrant or using GOOS=linux)
-2. `cd` into the directory and `docker build .`
+2. `cd` into the directory and `docker build -t robinmonjo/ftp2s3 .`
 
 ###Running the image
 
@@ -54,5 +54,22 @@ $> password
 $> put /local/path/to/an/image.png name_on_the_ftp.png
 ````
 
+#In production
 
+## run the image
+
+1. Install docker
+2. Make sure host port 21,22 and 5000-5100 are open
+3. `sudo docker pull robinmonjo/ftp2s3`
+4. Launch the container:
+
+````bash
+docker run -p 21:21 -p 20:20 -p 5000-5100:5000-5100 -e USERNAME=<username> -e PASSWORD=<password> -e AWS_SECRET_ACCESS_KEY=<secret_key> -e AWS_ACCESS_KEY=<access_key> -e AWS_BUCKET=<bucket_name> -e WEB_HOOK=<web_hook> -d --restart on-failure:10 --log-driver syslog robinmonjo/ftp2s3
+````
+
+5. Logs cat be read with `tail -F /var/log/syslog | grep docker/`
+
+## publish an update
+
+`docker push robinmonjo/ftp2s3`
  
