@@ -78,7 +78,7 @@ func main() {
 					log.Infof("now watching %s", ev.Name)
 					//add other sub directories
 					if err := setupRecursiveWatch(ev.Name, watcher); err != nil {
-						log.Fatal(err)
+						log.Error(err)
 					}
 				}
 
